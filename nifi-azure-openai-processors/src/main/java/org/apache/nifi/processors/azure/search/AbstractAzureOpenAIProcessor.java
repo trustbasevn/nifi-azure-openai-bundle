@@ -3,71 +3,49 @@ package org.apache.nifi.processors.azure.search;
 import com.azure.ai.openai.OpenAIClient;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
 import org.apache.nifi.annotation.lifecycle.OnStopped;
+import org.apache.nifi.azure.search.AzureOpenAIConnectionService;
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.logging.ComponentLog;
 import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.Relationship;
 
-import org.apache.nifi.azure.search.AzureOpenAIConnectionService;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public abstract class AbstractAzureOpenAIProcessor extends AbstractProcessor {
-    public static final Relationship REL_SUCCESS = new Relationship.Builder()
-            .name("success")
-            .description("Example success relationship")
-            .build();
 
-    public static final Relationship REL_FAILURE = new Relationship.Builder()
-            .name("failure")
-            .description("Example success relationship")
-            .build();
-
-    public static final Relationship REL_ORIGINAL = new Relationship.Builder()
-            .name("original")
-            .description("If there is an input flowfile, the original input flowfile will be " +
-                    "written to this relationship if the operation succeeds.")
-            .build();
-
-    public static final PropertyDescriptor OPENAI_CONNECTION_SERVICE = new PropertyDescriptor.Builder()
-            .name("SEARCH_CONNECTION_SERVICE")
+    static final PropertyDescriptor OPENAI_CONNECTION_SERVICE = new PropertyDescriptor.Builder()
+            .name("OPENAI_CONNECTION_SERVICE")
             .displayName("Azure Search Connection Service")
             .description("If configured, the controller service used to obtain the connection string and access key")
             .required(true)
             .identifiesControllerService(AzureOpenAIConnectionService.class)
             .build();
 
-    protected static final List<PropertyDescriptor> PROPERTIES;
-    protected static final Set<Relationship> RELATIONSHIPS;
+    static final Relationship REL_SUCCESS = new Relationship.Builder()
+            .name("success")
+            .description("FlowFiles that are successfully transformed will be routed to this relationship")
+            .build();
 
-    static {
-        List<PropertyDescriptor> descriptorList = new ArrayList<>();
-        descriptorList.add(OPENAI_CONNECTION_SERVICE);
+    static final Relationship REL_FAILURE = new Relationship.Builder()
+            .name("failure")
+            .description("If a FlowFile cannot be transformed from the configured input format to the configured output format, "
+                    + "the unchanged FlowFile will be routed to this relationship")
+            .build();
 
-        PROPERTIES = Collections.unmodifiableList(descriptorList);
+    private static final List<PropertyDescriptor> properties = List.of(OPENAI_CONNECTION_SERVICE);
+    private static final Set<Relationship> relationships = Set.of(REL_SUCCESS, REL_FAILURE);
 
-        Set<Relationship> relationshipSet = new HashSet<>();
-        relationshipSet.add(REL_SUCCESS);
-        relationshipSet.add(REL_FAILURE);
-        relationshipSet.add(REL_ORIGINAL);
-        RELATIONSHIPS = Collections.unmodifiableSet(relationshipSet);
+    @Override
+    protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
+        return properties;
     }
 
     @Override
     public Set<Relationship> getRelationships() {
-        return RELATIONSHIPS;
+        return relationships;
     }
-
-    @Override
-    protected List<PropertyDescriptor> getSupportedPropertyDescriptors() {
-        return PROPERTIES;
-    }
-
 
     private OpenAIClient openAIClient;
     private AzureOpenAIConnectionService connectionService;
